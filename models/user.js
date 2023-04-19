@@ -19,6 +19,30 @@ const User = new Schema({
         type: String,
         default: "",
     },
+    username: {
+        type: String,
+        default: "",
+    },
+    email: {
+        type: String,
+        default: "",
+    },
+    phone: {
+        type: String,
+        default: "",
+    },
+    city: {
+        type: String,
+        default: "",
+    },
+    role: {
+        type: String,
+        default: "user",
+    },
+    bio: {
+        type: String,
+        default: "",
+    },
     authStrategy: {
         type: String,
         default: "local",

@@ -39,6 +39,12 @@ router.post("/register", (req, res, next) => {
             name: "FirstNameError",
             message: "The first name is required",
         })
+    } else if (!req.body.role) {
+        res.statusCode = 500
+        res.send({
+            name: "RoleError",
+            message: "The role is required",
+        })
     } else {
         User.register(
             new User({ username: req.body.username }),
@@ -50,6 +56,9 @@ router.post("/register", (req, res, next) => {
                 } else {
                     user.firstName = req.body.firstName
                     user.lastName = req.body.lastName || ""
+                    user.city = req.body.city || "Boston"
+                    user.role = req.body.role || "user"
+                    user.bio = ""
                     const token = getToken({ _id: user._id })
                     const refreshToken = getRefreshToken({ _id: user._id })
                     user.refreshToken.push({ refreshToken })
@@ -146,9 +155,35 @@ router.get("/logout", verifyUser, (req, res, next) => {
     )
 })
 
-router.get("/me", verifyUser, (req, res, next) => {
+router.get("/profile", verifyUser, (req, res, next) => {
     res.send(req.user)
 })
 
+router.put("/profile", verifyUser, (req, res, next) => {
+    // Verify that email is not empty
+    if (!req.body.username) {
+        res.statusCode = 500
+        res.send({
+            name: "EmailError",
+            message: "Email is required",
+        })
+    } else {
+        User.updateOne({ username: req.user.username },
+            {
+                firstName: req.body.firstName,
+                lastName: req.body.lastName,
+                phone: req.body.phone,
+                role: req.body.role,
+                city: req.body.city,
+                bio: req.body.bio,
+            })
+            .then(result => {
+                res.send({ success: true })
+            })
+            .catch((err) => {
+                res.send(err)
+            })
+    }
+})
 
 module.exports = router
