@@ -43,6 +43,10 @@ const User = new Schema({
         type: String,
         default: "",
     },
+    photo: {
+        type: String,
+        default: "",
+    },
     authStrategy: {
         type: String,
         default: "local",

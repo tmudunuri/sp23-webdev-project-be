@@ -56,9 +56,12 @@ router.post("/register", (req, res, next) => {
                 } else {
                     user.firstName = req.body.firstName
                     user.lastName = req.body.lastName || ""
+                    user.email = req.body.email || ""
                     user.city = req.body.city || "Boston"
                     user.role = req.body.role || "user"
                     user.bio = ""
+                    user.photo = req.body.photo
+                    
                     const token = getToken({ _id: user._id })
                     const refreshToken = getRefreshToken({ _id: user._id })
                     user.refreshToken.push({ refreshToken })
@@ -155,23 +158,43 @@ router.get("/logout", verifyUser, (req, res, next) => {
     )
 })
 
-router.get("/profile", verifyUser, (req, res, next) => {
-    res.send(req.user)
+router.get("/profile/:uid?", verifyUser, (req, res, next) => {
+    var uid = req.params['uid']
+    if (uid == undefined) {
+        res.send(req.user)
+    }
+    else {
+        User.findOne({ username: uid })
+            .then(result => {
+                if (result != null) {
+                    res.send(result)
+                }
+                else {
+                    res.statusCode = 404
+                    res.send("User Not found")
+                }
+            })
+            .catch((err) => {
+                res.send(err)
+            })
+    }
+
 })
 
 router.put("/profile", verifyUser, (req, res, next) => {
-    // Verify that email is not empty
+    // Verify that Username is not empty
     if (!req.body.username) {
         res.statusCode = 500
         res.send({
-            name: "EmailError",
-            message: "Email is required",
+            name: "Username",
+            message: "Username is required",
         })
     } else {
         User.updateOne({ username: req.user.username },
             {
                 firstName: req.body.firstName,
                 lastName: req.body.lastName,
+                email: req.body.email,
                 phone: req.body.phone,
                 role: req.body.role,
                 city: req.body.city,
