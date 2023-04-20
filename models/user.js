@@ -47,6 +47,18 @@ const User = new Schema({
         type: String,
         default: "",
     },
+    likes: {
+        type: Array,
+        default: [],
+    },
+    dislikes: {
+        type: Array,
+        default: [],
+    },
+    visits: {
+        type: Array,
+        default: [],
+    },
     authStrategy: {
         type: String,
         default: "local",
