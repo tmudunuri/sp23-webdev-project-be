@@ -59,6 +59,10 @@ const User = new Schema({
         type: Array,
         default: [],
     },
+    owns: {
+        type: Array,
+        default: [],
+    },
     authStrategy: {
         type: String,
         default: "local",

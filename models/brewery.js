@@ -24,6 +24,10 @@ const Brewery = new Schema({
         type: Array,
         default: [],
     },
+    ownedBy: {
+        type: Array,
+        default: [],
+    },
 })
 
 Brewery.plugin(passportLocalMongoose)

@@ -25,7 +25,9 @@ router.get("/stats/:bid", verifyUser, (req, res, next) => {
                         reviewsCount: result.reviewedBy.length,
                         likedByUser: result.likedBy.includes(req.user._id),
                         dislikedByUser: result.dislikedBy.includes(req.user._id),
-                        visitedByUser: result.visitedBy.includes(req.user._id)
+                        visitedByUser: result.visitedBy.includes(req.user._id),
+                        ownedByUser: result.ownedBy.includes(req.user._id),
+                        userRole: req.user.role
                     })
                 }
                 else {
@@ -245,6 +247,82 @@ router.put("/visit", verifyUser, (req, res, next) => {
     }
 })
 
+router.put("/own", verifyUser, (req, res, next) => {
+    // Verify that bid is not empty
+    if (!req.body.bid) {
+        res.statusCode = 500
+        res.send({
+            name: "bid",
+            message: "bid is required",
+        })
+    }
+    else if (req.user.role != 'admin') {
+        res.statusCode = 401
+        res.send({
+            name: "owner",
+            message: "Only admins can own",
+        })
+    }
+    else {
+
+        // owns 
+        if (!req.body.owned) {
+            Brewery.updateOne(
+                { bid: req.body.bid },
+                { $addToSet: { "ownedBy": req.user._id } },
+                { upsert: true }
+            )
+                .then(result => {
+                    // res.send({ success: result.acknowledged })
+                    User.updateOne(
+                        { _id: req.user._id },
+                        { $addToSet: { "owns": req.body.bid } },
+                        { upsert: false }
+                    )
+                        .then(result => {
+                            res.send({ success: result.acknowledged, owned: true })
+                        })
+                        .catch((err) => {
+                            res.statusCode = 500
+                            res.send(err)
+                        })
+                })
+                .catch((err) => {
+                    res.statusCode = 500
+                    res.send(err)
+                })
+        }
+        else {
+            // sells 
+            Brewery.updateOne(
+                { bid: req.body.bid },
+                { $pull: { "ownedBy": req.user._id } },
+                { upsert: false }
+            )
+                .then(result => {
+                    // res.send({ success: result.acknowledged })
+                    User.updateOne(
+                        { _id: req.user._id },
+                        { $pull: { "owns": req.body.bid } },
+                        { upsert: false }
+                    )
+                        .then(result => {
+                            res.send({ success: result.acknowledged, owned: false })
+                        })
+                        .catch((err) => {
+                            res.statusCode = 500
+                            res.send(err)
+                        })
+                })
+                .catch((err) => {
+                    res.statusCode = 500
+                    res.send(err)
+                })
+        }
+
+    }
+})
+
 router.put("/review", verifyUser, (req, res, next) => {
     // Verify that bid is not empty
     if (!req.body.bid) {
@@ -271,8 +349,8 @@ router.put("/review", verifyUser, (req, res, next) => {
                         // res.send({ success: result.acknowledged })
                     })
                     .catch((err) => {
-                        res.statusCode = 500
-                        res.send(err)
+                        // res.statusCode = 500
+                        // res.send(err)
                     })
 
                 res.send({ success: result.acknowledged })
@@ -329,6 +407,52 @@ router.get("/review/:bid", (req, res, next) => {
             .catch((err) => {
                 res.send(err)
             })
+    }
+
+})
+
+router.delete("/review", verifyUser, (req, res, next) => {
+    // Verify that bid is not empty
+    if (!req.body.bid || !req.body.username) {
+        res.statusCode = 500
+        res.send({
+            name: "bid",
+            message: "bid and username are required",
+        })
+    }
+    else if (req.user.role != 'admin') {
+        res.statusCode = 401
+        res.send({
+            name: "admin",
+            message: "Only admins can perform this operation",
+        })
+    }
+    else {
+
+        BreweryReview.deleteOne({
+            bid: req.body.bid, username: req.body.username
+        }).then(result => {
+
+            Brewery.updateOne(
+                { bid: req.body.bid },
+                { $pull: { "reviewedBy": req.user._id } },
+                { upsert: false }
+            )
+                .then(result => {
+                    // res.send({ success: result.acknowledged })
+                })
+                .catch((err) => {
+                    res.statusCode = 500
+                    res.send(err)
+                })
+
+            res.send({ success: true })
+        })
+            .catch((err) => {
+                res.statusCode = 500
+                res.send(err)
+            })
+
     }
 
 })
