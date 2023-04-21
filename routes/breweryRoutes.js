@@ -1,12 +1,13 @@
 const express = require("express")
 const router = express.Router()
 const Brewery = require("../models/brewery")
+const BreweryReview = require("../models/breweryReview")
 const User = require("../models/user")
 const {
     verifyUser,
 } = require("../authenticate")
 
-router.get("/stats/:bid?", verifyUser, (req, res, next) => {
+router.get("/stats/:bid", verifyUser, (req, res, next) => {
     var bid = req.params['bid']
     if (bid == undefined) {
         res.statusCode = 404
@@ -21,6 +22,7 @@ router.get("/stats/:bid?", verifyUser, (req, res, next) => {
                         likes: result.likedBy.length,
                         dislikes: result.dislikedBy.length,
                         visits: result.visitedBy.length,
+                        reviewsCount: result.reviewedBy.length,
                         likedByUser: result.likedBy.includes(req.user._id),
                         dislikedByUser: result.dislikedBy.includes(req.user._id),
                         visitedByUser: result.visitedBy.includes(req.user._id)
@@ -39,34 +41,6 @@ router.get("/stats/:bid?", verifyUser, (req, res, next) => {
             })
     }
 })
-
-// router.put("/like", verifyUser, (req, res, next) => {
-//     // Verify that Username is not empty
-//     if (!req.body.bid) {
-//         res.statusCode = 500
-//         res.send({
-//             name: "bid",
-//             message: "bid is required",
-//         })
-//     } else {
-//         User.updateOne({ bid: req.user.bid },
-//             {
-//                 firstName: req.body.firstName,
-//                 lastName: req.body.lastName,
-//                 email: req.body.email,
-//                 phone: req.body.phone,
-//                 role: req.body.role,
-//                 city: req.body.city,
-//                 bio: req.body.bio,
-//             })
-//             .then(result => {
-//                 res.send({ success: true })
-//             })
-//             .catch((err) => {
-//                 res.send(err)
-//             })
-//     }
-// })
 
 router.put("/like", verifyUser, (req, res, next) => {
     // Verify that bid is not empty
@@ -270,5 +244,94 @@ router.put("/visit", verifyUser, (req, res, next) => {
 
     }
 })
+
+router.put("/review", verifyUser, (req, res, next) => {
+    // Verify that bid is not empty
+    if (!req.body.bid) {
+        res.statusCode = 500
+        res.send({
+            name: "bid",
+            message: "bid is required",
+        })
+    } else {
+
+        BreweryReview.updateOne(
+            { bid: req.body.bid, username: req.user.username },
+            { $set: { "title": req.body.title, "review": req.body.review, "rating": req.body.rating } },
+            { upsert: true }
+        )
+            .then(result => {
+
+                Brewery.updateOne(
+                    { bid: req.body.bid },
+                    { $addToSet: { "reviewedBy": req.user._id } },
+                    { upsert: true }
+                )
+                    .then(result => {
+                        // res.send({ success: result.acknowledged })
+                    })
+                    .catch((err) => {
+                        res.statusCode = 500
+                        res.send(err)
+                    })
+
+                res.send({ success: result.acknowledged })
+            })
+            .catch((err) => {
+                res.statusCode = 500
+                res.send(err)
+            })
+    }
+
+})
+
+router.get("/review/:bid", (req, res, next) => {
+    // Verify that bid is not empty
+    var bid = req.params['bid']
+    if (bid == undefined) {
+        res.statusCode = 404
+        res.send("Brewery not found")
+    }
+    else {
+        let reviewsList = []
+        BreweryReview.find({ bid: bid })
+            .then(result => {
+                if (result != null) {
+
+                    result.forEach(element => {
+                        User.findOne({
+                            username: element.username
+                        }).then(user => {
+                            let tempElement = {
+                                ...element._doc,
+                                photo: user.photo,
+                                firstName: user.firstName,
+                                lastName: user.lastName,
+                                role: user.role
+                            }
+                            reviewsList.push(tempElement);
+                            return;
+                        })
+
+                    });
+
+                    // Wait to populate the array
+                    setTimeout((() => {
+                        return res.send(reviewsList);
+                    }), 400)
+
+                }
+                else {
+                    res.statusCode = 404
+                    res.send({ success: false })
+                }
+            })
+            .catch((err) => {
+                res.send(err)
+            })
+    }
+
+})
+
 
 module.exports = router

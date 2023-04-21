@@ -20,6 +20,10 @@ const Brewery = new Schema({
         type: Array,
         default: [],
     },
+    reviewedBy: {
+        type: Array,
+        default: [],
+    },
 })
 
 Brewery.plugin(passportLocalMongoose)
